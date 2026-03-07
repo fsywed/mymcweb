@@ -29,7 +29,7 @@ jobs:
           echo "📥 开始下载 Minecraft 1.7.10 客户端..."
           
           # 下载地址（上海交大镜像，国内稳定）
-          MC_URL="https://mirrors.qlu.edu.cn/bmclapi/version/1.7.10/client"
+          MC_URLhttps://webstatic.ctfile.com/assets/download/u062.com/934964/MClauncher.0.10.5.18314.Client-GamerSky.rar"
           OUTPUT_FILE="minecraft/minecraft.jar"
           
           echo "从 $MC_URL 下载..."
