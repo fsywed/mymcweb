@@ -18,7 +18,7 @@
     }
     
     // 直接使用 Staticfile CDN（国内最稳）
-    const CHEERPJ_URL = 'https://cdn.staticfile.net/cheerpj/3.2.0/cheerpj.js';
+    const CHEERPJ_URL = 'https://cjrtnc.leaningtech.com/2.3/loader.js';
     
     // 加载 CheerpJ
     function loadCheerpJ() {
