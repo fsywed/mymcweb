@@ -195,3 +195,120 @@ h1 {
         width: 100%;
     }
       }
+/* 诊断面板样式 */
+.diagnostic-panel {
+    background: rgba(20, 28, 36, 0.6);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 20px;
+    border: 1px solid rgba(107, 140, 255, 0.3);
+}
+
+.diagnostic-panel h3 {
+    margin-bottom: 16px;
+    color: #a0e7ff;
+}
+
+.diagnostic-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.diagnostic-item:last-child {
+    border-bottom: none;
+}
+
+.diag-label {
+    color: #b8c5d9;
+}
+
+.diag-value {
+    font-weight: 600;
+}
+
+.diag-value.success {
+    color: #4caf50;
+}
+
+.diag-value.error {
+    color: #f44336;
+}
+
+.diag-value.warning {
+    color: #ff9800;
+}
+
+.diag-value.checking {
+    color: #ff9800;
+}
+
+/* 镜像选择器 */
+.mirror-selector {
+    background: rgba(20, 28, 36, 0.6);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.mirror-selector h3 {
+    margin-bottom: 16px;
+    color: #a0e7ff;
+}
+
+.mirror-options {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.mirror-options label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #e4e6eb;
+    cursor: pointer;
+}
+
+.local-path {
+    margin-top: 12px;
+}
+
+.local-path input {
+    width: 100%;
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    color: #e4e6eb;
+    font-family: monospace;
+}
+
+/* 错误详情 */
+.error-detail {
+    background: rgba(244, 67, 54, 0.1);
+    border-left: 4px solid #f44336;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 20px;
+}
+
+.error-detail h3 {
+    color: #f44336;
+    margin-bottom: 12px;
+}
+
+.error-detail pre {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    color: #ffcdd2;
+    font-family: monospace;
+    font-size: 12px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
