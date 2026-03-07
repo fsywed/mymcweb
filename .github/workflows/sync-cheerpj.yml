@@ -1,137 +1,26 @@
-name: 同步 CheerpJ 到仓库
+name: 下载 CheerpJ
 
 on:
-  # 手动触发
   workflow_dispatch:
-  
-  # 每周自动运行一次（可选）
-  schedule:
-    - cron: '0 0 * * 0'  # 每周日零点
 
 jobs:
-  sync-cheerpj:
+  download:
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # 允许写入仓库
-    
+      contents: write
     steps:
-      - name: 检出代码
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
       
-      - name: 清空 cheerpj 目录
-        run: |
-          echo "🧹 清空 cheerpj 目录..."
-          if [ -d "cheerpj" ]; then
-            rm -rf cheerpj/*
-            echo "✅ 已清空 cheerpj 目录"
-          else
-            echo "📁 cheerpj 目录不存在，稍后创建"
-          fi
-      
-      - name: 创建 cheerpj 目录
+      - name: 下载 cheerpj.js
         run: |
           mkdir -p cheerpj
-          echo "✅ 确保 cheerpj 目录存在"
+          curl -L -o cheerpj/cheerpj.js https://raw.githubusercontent.com/fsywed/mymcweb/main/backup/cheerpj.js || \
+          curl -L -o cheerpj/cheerpj.js https://gitee.com/fsyuanweb/mymcweb/raw/main/backup/cheerpj.js
       
-      - name: 下载 CheerpJ 文件
+      - name: 提交
         run: |
-          echo "📥 开始下载 CheerpJ 文件..."
-          
-          # 定义下载函数，带重试机制
-          download_file() {
-            local url=$1
-            local output=$2
-            local name=$3
-            local max_retries=3
-            local retry=0
-            
-            echo "下载 $name..."
-            
-            while [ $retry -lt $max_retries ]; do
-              # 使用 -L 跟随重定向，-f 失败时返回错误，-s 静默模式
-              if curl -L -f -s -o "$output" "$url"; then
-                # 检查文件是否为空
-                if [ -s "$output" ]; then
-                  local size=$(wc -c < "$output")
-                  echo "  ✅ $name 下载成功 (大小: $size 字节)"
-                  return 0
-                else
-                  echo "  ⚠️ $name 文件为空，重试中... ($((retry+1))/$max_retries)"
-                fi
-              else
-                echo "  ⚠️ $name 下载失败，重试中... ($((retry+1))/$max_retries)"
-              fi
-              
-              retry=$((retry + 1))
-              [ $retry -lt $max_retries ] && sleep 2
-            done
-            
-            echo "  ❌ $name 下载失败，已达最大重试次数"
-            return 1
-          }
-          
-          # 下载 cheerpj.js (主要文件)
-          download_file \
-            "https://cdn.jsdelivr.net/npm/@leaningtech/cheerpj@3.2.0/cheerpj.js" \
-            "cheerpj/cheerpj.js" \
-            "cheerpj.js"
-          
-          # 下载 cheerpj-core.js (运行时核心)
-          download_file \
-            "https://cdn.jsdelivr.net/npm/@leaningtech/cheerpj@3.2.0/cheerpj-core.js" \
-            "cheerpj/cheerpj-core.js" \
-            "cheerpj-core.js"
-          
-          # 下载 cheerpj-dom.js (DOM 支持，可选)
-          download_file \
-            "https://cdn.jsdelivr.net/npm/@leaningtech/cheerpj@3.2.0/cheerpj-dom.js" \
-            "cheerpj/cheerpj-dom.js" \
-            "cheerpj-dom.js"
-          
-          # 显示最终结果
-          echo ""
-          echo "📊 下载完成，文件列表："
-          ls -la cheerpj/
-          
-          # 验证关键文件是否存在且有内容
-          if [ ! -s "cheerpj/cheerpj.js" ]; then
-            echo "❌ 错误：cheerpj.js 下载失败或为空"
-            exit 1
-          fi
-          
-          echo ""
-          echo "📄 cheerpj.js 前几行内容："
-          head -n 5 cheerpj/cheerpj.js
-      
-      - name: 检查是否有变化
-        id: check
-        run: |
-          git add cheerpj/
-          
-          if git diff --staged --quiet; then
-            echo "changed=false" >> $GITHUB_OUTPUT
-            echo "📭 文件没有变化，无需提交"
-          else
-            echo "changed=true" >> $GITHUB_OUTPUT
-            echo "📦 检测到文件变化，准备提交"
-          fi
-      
-      - name: 提交到仓库
-        if: steps.check.outputs.changed == 'true'
-        run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          git commit -m "🤖 自动更新 CheerpJ 文件
-
-          更新内容：
-          - 同步最新版 CheerpJ (v3.2.0)
-          - 来源: jsDelivr CDN
-          - 自动清空旧文件后重新下载"
-          
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add cheerpj
+          git commit -m "add cheerpj" || exit 0
           git push
-          echo "✅ 已成功提交到仓库"
-      
-      - name: 完成
-        run: |
-          echo "🎉 CheerpJ 同步工作流执行完成！"
-          echo "文件已保存在仓库的 cheerpj/ 目录"
