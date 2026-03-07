@@ -1,0 +1,57 @@
+name: 同步 CheerpJ 到仓库
+
+on:
+  # 手动触发（你可以在 GitHub 页面点按钮运行）
+  workflow_dispatch:
+  
+  # 每周自动同步一次（可选）
+  schedule:
+    - cron: '0 0 * * 0'  # 每周日零点
+
+jobs:
+  sync-cheerpj:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # 允许提交代码
+    
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v3
+      
+      - name: 创建 cheerpj 目录
+        run: mkdir -p cheerpj
+      
+      - name: 下载 CheerpJ 文件
+        run: |
+          echo "📥 下载 CheerpJ 核心库..."
+          curl -L -o cheerpj/cheerpj.js https://cdn.jsdelivr.net/npm/@leaningtech/cheerpj@3.2.0/cheerpj.js
+          
+          echo "📥 下载 CheerpJ 运行时..."
+          curl -L -o cheerpj/cheerpj-core.js https://cdn.jsdelivr.net/npm/@leaningtech/cheerpj@3.2.0/cheerpj-core.js
+          
+          echo "📥 下载 CheerpJ DOM 支持..."
+          curl -L -o cheerpj/cheerpj-dom.js https://cdn.jsdelivr.net/npm/@leaningtech/cheerpj@3.2.0/cheerpj-dom.js
+          
+          echo "✅ 下载完成"
+          ls -la cheerpj/
+      
+      - name: 检查文件是否变化
+        id: check
+        run: |
+          git add cheerpj/
+          if git diff --staged --quiet; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "📭 文件没有变化"
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "📦 文件有更新"
+          fi
+      
+      - name: 提交到仓库
+        if: steps.check.outputs.changed == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git commit -m "🤖 自动更新 CheerpJ 文件"
+          git push
+          echo "✅ 已提交到仓库"
