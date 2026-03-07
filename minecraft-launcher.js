@@ -46,67 +46,48 @@
     }
     
     // 启动游戏
-    async function startGame() {
-        try {
-            // 1. 加载 CheerpJ
-            await loadCheerpJ();
-            
-            // 2. 等待 cheerpjInit 可用
-            updateStatus('初始化中...', 50);
-            for (let i = 0; i < 20; i++) {
-                if (window.cheerpjInit) break;
-                await new Promise(r => setTimeout(r, 200));
-            }
-            
-            if (!window.cheerpjInit) {
-                throw new Error('cheerpjInit 不可用');
-            }
-            
-            // 3. 初始化
-            await cheerpjInit({
-                javaVersion: '8',
-                initialHeapSize: 384 * 1024 * 1024
-            });
-            
-            updateStatus('下载 Minecraft...', 70);
-            
-            // 4. 挂载 JAR（上海交大镜像）
-            // 新版 CheerpJ 文件挂载方式
-updateStatus('准备游戏文件...', 70);
+    // 启动游戏
+async function startGame() {
+    try {
+        // 1. 加载 CheerpJ
+        await loadCheerpJ();
 
-// 方法1：直接使用 /app/ 挂载点（最简单）
-// 根据官方文档，/app/ 直接对应你的 web 服务器根目录 [citation:1]
-// 所以你可以直接运行远程 JAR，不需要先"下载"到虚拟文件系统
-
-// 如果上面的方法不行，用这个方法创建目录并准备文件
-if (window.cheerpOSAddStringFile) {
-    // 新版 API：从 URL 加载文件到虚拟文件系统
-    const response = await fetch('https://mirrors.cernet.edu.cn/bmclapi/version/1.7.10/client');
-    const jarData = await response.arrayBuffer();
-    await cheerpOSAddStringFile('/app/minecraft/minecraft.jar', new Uint8Array(jarData));
-} else {
-    // 如果新 API 也不存在，直接用 URL 运行（不先挂载）
-    console.log('尝试直接运行远程 JAR');
-}
-            
-            updateStatus('启动游戏中...', 90);
-            
-            // 5. 运行
-            cheerpjRunJar('/app/minecraft/minecraft.jar', [
-                '--username', 'Player' + Math.floor(Math.random() * 1000),
-                '--version', '1.7.10',
-                '--gameDir', '/app/minecraft/game',
-                '--assetsDir', '/app/minecraft/assets',
-                '--accessToken', 'dummy'
-            ]);
-            
-            updateStatus('✅ 游戏运行中', 100);
-            
-        } catch (err) {
-            console.error('❌ 启动失败:', err);
-            updateStatus('❌ 失败: ' + err.message, 0);
+        // 2. 等待 cheerpjInit 可用
+        updateStatus('初始化中...', 50);
+        for (let i = 0; i < 20; i++) {
+            if (window.cheerpjInit) break;
+            await new Promise(r => setTimeout(r, 200));
         }
+
+        if (!window.cheerpjInit) {
+            throw new Error('cheerpjInit 不可用');
+        }
+
+        // 3. 初始化 CheerpJ
+        await cheerpjInit({
+            javaVersion: '8',
+            initialHeapSize: 384 * 1024 * 1024
+        });
+
+        updateStatus('启动游戏中...', 70);
+
+        // 4. ⭐ 直接运行 JAR，CheerpJ 会自动通过 HTTP 从 /app/ 加载它
+        //    确保你的 JAR 文件放在服务器根目录的 /minecraft/minecraft.jar
+        cheerpjRunJar('/app/minecraft/minecraft.jar', [
+            '--username', 'Player' + Math.floor(Math.random() * 1000),
+            '--version', '1.7.10',
+            '--gameDir', '/app/game',          // 工作目录也建议用 /app/
+            '--assetsDir', '/app/assets',       // 资源目录也建议用 /app/
+            '--accessToken', 'dummy'
+        ]);
+
+        updateStatus('✅ 游戏运行中', 100);
+
+    } catch (err) {
+        console.error('❌ 启动失败:', err);
+        updateStatus('❌ 失败: ' + err.message, 0);
     }
+}
     
     // 绑定按钮
     if (launchBtn) {
