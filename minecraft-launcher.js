@@ -71,15 +71,23 @@
             updateStatus('下载 Minecraft...', 70);
             
             // 4. 挂载 JAR（上海交大镜像）
-            if (window.cheerpjCreateDirectory) {
-                await cheerpjCreateDirectory('/app/minecraft');
-            }
-            
-            await cheerpjAttachFile(
-                '/app/minecraft/minecraft.jar',
-                'https://mirrors.cernet.edu.cn/bmclapi/version/1.7.10/client',
-                { mode: 'read' }
-            );
+            // 新版 CheerpJ 文件挂载方式
+updateStatus('准备游戏文件...', 70);
+
+// 方法1：直接使用 /app/ 挂载点（最简单）
+// 根据官方文档，/app/ 直接对应你的 web 服务器根目录 [citation:1]
+// 所以你可以直接运行远程 JAR，不需要先"下载"到虚拟文件系统
+
+// 如果上面的方法不行，用这个方法创建目录并准备文件
+if (window.cheerpOSAddStringFile) {
+    // 新版 API：从 URL 加载文件到虚拟文件系统
+    const response = await fetch('https://mirrors.cernet.edu.cn/bmclapi/version/1.7.10/client');
+    const jarData = await response.arrayBuffer();
+    await cheerpOSAddStringFile('/app/minecraft/minecraft.jar', new Uint8Array(jarData));
+} else {
+    // 如果新 API 也不存在，直接用 URL 运行（不先挂载）
+    console.log('尝试直接运行远程 JAR');
+}
             
             updateStatus('启动游戏中...', 90);
             
