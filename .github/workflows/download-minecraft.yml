@@ -1,0 +1,129 @@
+name: 下载 Minecraft 客户端
+
+on:
+  # 手动触发（你可以在 GitHub 页面点按钮运行）
+  workflow_dispatch:
+  
+  # 每周自动同步一次（可选）
+  schedule:
+    - cron: '0 0 * * 0'  # 每周日零点
+
+jobs:
+  download-minecraft:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # 允许写入仓库
+    
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v3
+      
+      - name: 创建 minecraft 目录
+        run: |
+          echo "📁 创建 minecraft 目录..."
+          mkdir -p minecraft
+          echo "✅ 目录准备就绪"
+      
+      - name: 下载 Minecraft 1.7.10 客户端
+        run: |
+          echo "📥 开始下载 Minecraft 1.7.10 客户端..."
+          
+          # 下载地址（上海交大镜像，国内稳定）
+          MC_URL="https://mirrors.cernet.edu.cn/bmclapi/version/1.7.10/client"
+          OUTPUT_FILE="minecraft/minecraft.jar"
+          
+          echo "从 $MC_URL 下载..."
+          
+          # 使用重试机制下载
+          MAX_RETRIES=3
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "尝试 $i/$MAX_RETRIES ..."
+            
+            # 下载文件，-L 跟随重定向，-f 失败时返回错误，-s 静默模式，-o 输出文件
+            if curl -L -f -s -o "$OUTPUT_FILE" "$MC_URL"; then
+              # 检查文件是否下载成功（非空）
+              if [ -s "$OUTPUT_FILE" ]; then
+                FILE_SIZE=$(wc -c < "$OUTPUT_FILE")
+                echo "✅ 下载成功！文件大小: $FILE_SIZE 字节"
+                
+                # 显示文件信息
+                echo "文件类型检查:"
+                file "$OUTPUT_FILE"
+                
+                # 计算 SHA256 校验和
+                echo "SHA256 校验和:"
+                sha256sum "$OUTPUT_FILE"
+                
+                break
+              else
+                echo "⚠️ 下载的文件为空，重试中..."
+              fi
+            else
+              echo "⚠️ 下载失败，重试中..."
+            fi
+            
+            if [ $i -eq $MAX_RETRIES ]; then
+              echo "❌ 所有下载尝试均失败！"
+              exit 1
+            fi
+            sleep 3
+          done
+      
+      - name: 验证文件完整性
+        run: |
+          echo "🔍 验证下载的文件..."
+          
+          if [ ! -f "minecraft/minecraft.jar" ]; then
+            echo "❌ 错误：minecraft.jar 文件不存在"
+            exit 1
+          fi
+          
+          FILE_SIZE=$(wc -c < "minecraft/minecraft.jar")
+          if [ "$FILE_SIZE" -lt 1000000 ]; then  # 小于 1MB 肯定有问题
+            echo "❌ 错误：文件太小 ($FILE_SIZE 字节)，可能不是有效的 JAR 文件"
+            exit 1
+          fi
+          
+          echo "✅ 文件验证通过"
+          echo "最终文件位置: $(pwd)/minecraft/minecraft.jar"
+          echo "文件大小: $FILE_SIZE 字节"
+          ls -la minecraft/
+      
+      - name: 提交到仓库
+        run: |
+          echo "📦 准备提交到仓库..."
+          
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          
+          git add minecraft/
+          
+          if git diff --staged --quiet; then
+            echo "📭 文件没有变化，无需提交"
+          else
+            git commit -m "🤖 自动下载 Minecraft 1.7.10 客户端
+
+            更新内容：
+            - 从上海交大镜像站下载 Minecraft 1.7.10
+            - 文件保存到 minecraft/minecraft.jar
+            - 来源: mirrors.cernet.edu.cn/bmclapi"
+            
+            git push
+            echo "✅ 已成功提交到仓库"
+          fi
+      
+      - name: 完成提示
+        run: |
+          echo "🎉 Minecraft 客户端下载完成！"
+          echo ""
+          echo "📁 文件位置: minecraft/minecraft.jar"
+          echo ""
+          echo "🔗 访问地址:"
+          echo "  - GitHub Pages: https://fsyuanweb.github.io/mymcweb/minecraft/minecraft.jar"
+          echo "  - Gitee Pages: https://fsyuanweb.gitee.io/mymcweb/minecraft/minecraft.jar"
+          echo ""
+          echo "📝 使用方式:"
+          echo "  在 index.html 中引用:"
+          echo "  <script src=\"minecraft-launcher.js\"></script>"
+          echo "  在 JS 中直接运行:"
+          echo "  cheerpjRunJar('/app/minecraft/minecraft.jar', ...)"
