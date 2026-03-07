@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>网页版 Minecraft · CheerpJ 启动器</title>
+    <!-- 引入 CheerpJ 核心库 -->
+    <script src="https://cheerpj.com/cheerpj.js"></script>
+    <!-- 引入自定义样式 -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>⛏️ 我的世界 · 网页版</h1>
+        <p class="subtitle">基于 CheerpJ 在浏览器中运行 Java 版 Minecraft</p>
+        
+        <div class="status-card">
+            <div class="status-header">
+                <span class="status-label">当前状态：</span>
+                <span id="status-text" class="status-value">等待启动...</span>
+            </div>
+            <div class="progress-bar" id="progress-bar">
+                <div class="progress-fill" id="progress-fill"></div>
+            </div>
+        </div>
+
+        <div class="control-panel">
+            <button id="launch-btn" class="btn btn-primary">🚀 启动游戏</button>
+            <button id="reset-btn" class="btn btn-secondary">🔄 重置环境</button>
+        </div>
+
+        <div class="info-panel">
+            <h3>📦 使用说明</h3>
+            <ul>
+                <li>本页面使用 BMCLAPI 镜像源下载游戏文件</li>
+                <li>首次启动需要加载约 50MB 的依赖库</li>
+                <li>游戏版本：Minecraft 1.8.9（兼容性最佳）</li>
+                <li>所有计算都在你的浏览器中运行，无需服务器</li>
+            </ul>
+        </div>
+
+        <!-- Canvas 容器：CheerpJ 会把游戏画面渲染在这里 -->
+        <div id="game-container" class="game-container"></div>
+    </div>
+
+    <!-- 引入自定义 JS -->
+    <script src="minecraft-launcher.js"></script>
+</body>
+</html>
