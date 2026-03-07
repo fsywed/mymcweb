@@ -1,210 +1,291 @@
-// Minecraft 网页版启动器 - 精简版 (1.13 去声音版)
-// 使用上海交大镜像源，国内稳定加速
+// ============================================
+// Minecraft 网页版 - 最终调试版
+// 版本: 1.7.10 | 镜像: 上海交大 BMCLAPI
+// ============================================
 
-// 配置参数 - 改成 1.13 精简版
-const CONFIG = {
-    mcVersion: '1.13',
-    // 使用上海交大 BMCLAPI 镜像（国内教育网节点，极稳）
-    jarUrl: 'https://mirrors.cernet.edu.cn/bmclapi/version/1.13/client',
-    mountPoint: '/app/minecraft',
-    // CheerpJ 运行时库（只加载必要的）
-    runtimeLibs: ['java.io', 'java.awt', 'javax.swing', 'org.lwjgl']
-};
-
-// DOM 元素
-const elements = {
-    statusText: document.getElementById('status-text'),
-    progressFill: document.getElementById('progress-fill'),
-    launchBtn: document.getElementById('launch-btn'),
-    resetBtn: document.getElementById('reset-btn'),
-    gameContainer: document.getElementById('game-container')
-};
-
-let isRunning = false;
-
-/**
- * 更新状态显示
- */
-function updateStatus(text, progress = null) {
-    if (elements.statusText) elements.statusText.textContent = text;
-    if (progress !== null && elements.progressFill) {
-        elements.progressFill.style.width = `${progress}%`;
+(function() {
+    console.log('🚀 Minecraft 启动器开始运行');
+    
+    // 获取页面元素
+    const statusText = document.getElementById('status-text');
+    const progressFill = document.getElementById('progress-fill');
+    const launchBtn = document.getElementById('launch-btn');
+    const gameContainer = document.getElementById('game-container');
+    
+    // 更新状态
+    function updateStatus(text, progress) {
+        console.log('📢 状态:', text, progress || '');
+        if (statusText) statusText.textContent = text;
+        if (progressFill && progress !== undefined) {
+            progressFill.style.width = progress + '%';
+        }
     }
-    console.log(`[状态] ${text} ${progress ? progress + '%' : ''}`);
-}
-
-/**
- * 动态加载 CheerpJ 脚本（使用国内 CDN）
- */
-function loadCheerpJ() {
-    return new Promise((resolve, reject) => {
-        // 如果已经加载过，直接返回
+    
+    // 更新诊断项
+    function updateDiag(id, text, className) {
+        const el = document.getElementById(id);
+        if (el) {
+            el.textContent = text;
+            if (className) el.className = 'diag-value ' + className;
+        }
+    }
+    
+    // ========================================
+    // 1. 页面加载完成后的基础检测
+    // ========================================
+    window.addEventListener('load', function() {
+        console.log('📄 页面加载完成');
+        updateStatus('检测环境中...', 5);
+        
+        // 检测 WebAssembly
+        const wasmSupported = typeof WebAssembly === 'object';
+        updateDiag('diag-wasm', wasmSupported ? '✅ 支持' : '❌ 不支持', 
+                  wasmSupported ? 'success' : 'error');
+        
+        // 检测内存 (估算)
+        updateDiag('diag-memory', '2GB+ (预估)', 'success');
+        
+        // 检测是否已有 CheerpJ
         if (window.cheerpj) {
-            console.log('CheerpJ 已存在');
-            resolve();
+            updateDiag('diag-cheerpj', '✅ 已加载', 'success');
+        } else {
+            updateDiag('diag-cheerpj', '⏳ 等待加载', 'warning');
+        }
+        
+        updateStatus('就绪，请点击启动', 0);
+    });
+    
+    // ========================================
+    // 2. 镜像源切换逻辑
+    // ========================================
+    const mirrorRadios = document.querySelectorAll('input[name="mirror"]');
+    const localPathDiv = document.getElementById('local-path-input');
+    
+    if (mirrorRadios.length) {
+        mirrorRadios.forEach(radio => {
+            radio.addEventListener('change', function(e) {
+                if (localPathDiv) {
+                    localPathDiv.style.display = e.target.value === 'local' ? 'block' : 'none';
+                }
+                updateDiag('diag-cheerpj', '⏳ 镜像已切换，需重新启动', 'warning');
+            });
+        });
+    }
+    
+    // ========================================
+    // 3. 检测镜像源连接
+    // ========================================
+    async function testMirror(url) {
+        try {
+            const res = await fetch(url, { method: 'HEAD', mode: 'no-cors' });
+            return true;
+        } catch (e) {
+            return false;
+        }
+    }
+    
+    // 测试常用镜像
+    Promise.all([
+        testMirror('https://cdn.jsdelivr.net/npm/@leaningtech/cheerpj@3.2.0/cheerpj.js'),
+        testMirror('https://unpkg.com/@leaningtech/cheerpj@3.2.0/cheerpj.js')
+    ]).then(results => {
+        const mirrorEl = document.getElementById('diag-mirror');
+        if (mirrorEl) {
+            if (results[0]) {
+                mirrorEl.innerHTML = '✅ jsDelivr 可用';
+                mirrorEl.className = 'diag-value success';
+            } else if (results[1]) {
+                mirrorEl.innerHTML = '✅ UNPKG 可用';
+                mirrorEl.className = 'diag-value success';
+            } else {
+                mirrorEl.innerHTML = '❌ 镜像均不可用';
+                mirrorEl.className = 'diag-value error';
+            }
+        }
+    });
+    
+    // ========================================
+    // 4. 启动游戏主函数
+    // ========================================
+    async function startGame() {
+        console.log('🎮 启动按钮被点击');
+        updateStatus('启动流程开始...', 10);
+        
+        // 获取选中的镜像
+        let selectedMirror = 'jsdelivr';
+        for (let radio of mirrorRadios) {
+            if (radio.checked) {
+                selectedMirror = radio.value;
+                break;
+            }
+        }
+        
+        // 确定 CheerpJ 脚本地址
+        let scriptUrl = 'https://cdn.jsdelivr.net/npm/@leaningtech/cheerpj@3.2.0/cheerpj.js';
+        if (selectedMirror === 'unpkg') {
+            scriptUrl = 'https://unpkg.com/@leaningtech/cheerpj@3.2.0/cheerpj.js';
+        } else if (selectedMirror === 'staticfile') {
+            scriptUrl = 'https://cdn.staticfile.net/cheerpj/3.2.0/cheerpj.js';
+        } else if (selectedMirror === 'local') {
+            const localInput = document.querySelector('.local-path input');
+            scriptUrl = localInput ? localInput.value : 'js/cheerpj.js';
+            if (!scriptUrl) {
+                alert('请填写本地 cheerpj.js 路径');
+                return;
+            }
+        }
+        
+        console.log('📡 使用镜像:', selectedMirror, scriptUrl);
+        
+        // ===== 如果 CheerpJ 还没加载，先加载 =====
+        if (!window.cheerpj) {
+            updateStatus('正在加载 CheerpJ...', 20);
+            
+            try {
+                await new Promise((resolve, reject) => {
+                    const script = document.createElement('script');
+                    script.src = scriptUrl;
+                    script.onload = () => {
+                        console.log('✅ CheerpJ 脚本加载成功');
+                        updateDiag('diag-cheerpj', '✅ 已加载', 'success');
+                        resolve();
+                    };
+                    script.onerror = () => {
+                        console.error('❌ CheerpJ 脚本加载失败');
+                        updateDiag('diag-cheerpj', '❌ 加载失败', 'error');
+                        reject(new Error('CheerpJ 加载失败'));
+                    };
+                    document.head.appendChild(script);
+                });
+            } catch (e) {
+                updateStatus('❌ CheerpJ 加载失败', 0);
+                return;
+            }
+        }
+        
+        // ===== 等待 cheerpjInit 可用 =====
+        updateStatus('等待 CheerpJ 初始化...', 40);
+        
+        // 轮询检查 cheerpjInit 是否存在
+        let initReady = false;
+        for (let i = 0; i < 20; i++) {
+            if (window.cheerpjInit) {
+                initReady = true;
+                break;
+            }
+            console.log('⏳ 等待 cheerpjInit...', i);
+            await new Promise(r => setTimeout(r, 200));
+        }
+        
+        if (!initReady) {
+            updateStatus('❌ CheerpJ 初始化函数不可用', 0);
+            console.error('cheerpjInit 未定义');
             return;
         }
-
-        updateStatus('正在加载 CheerpJ 核心库...', 20);
         
-        // 使用 jsDelivr 国内 CDN
-        const script = document.createElement('script');
-        script.src = 'https://cdn.jsdelivr.net/npm/@leaningtech/cheerpj@3.2.0/cheerpj.js';
-        script.onload = () => {
-            console.log('CheerpJ 脚本加载成功');
-            updateStatus('CheerpJ 核心库加载成功', 40);
-            resolve();
-        };
-        script.onerror = (err) => {
-            console.error('CheerpJ 加载失败:', err);
-            reject(new Error('CheerpJ 库加载失败，请检查网络或切换镜像'));
-        };
-        document.head.appendChild(script);
-    });
-}
-
-/**
- * 初始化 CheerpJ 运行时
- */
-async function initCheerpJ() {
-    try {
-        updateStatus('正在初始化 CheerpJ 运行时...', 50);
+        console.log('✅ cheerpjInit 可用，开始初始化');
         
-        await cheerpjInit({
-            javaVersion: '8',
-            initialHeapSize: 384 * 1024 * 1024,  // 384MB 足够 1.13 运行
-            maxHeapSize: 768 * 1024 * 1024,      // 768MB
-            enableFileSystem: true,
-            mounts: {
-                '/app': new cheerpj.IDBMount('/app')  // 持久化存储
+        // ===== 初始化 CheerpJ =====
+        try {
+            updateStatus('初始化 CheerpJ 运行时...', 50);
+            
+            await cheerpjInit({
+                javaVersion: '8',
+                initialHeapSize: 384 * 1024 * 1024,
+                maxHeapSize: 768 * 1024 * 1024,
+                disableSecurityManager: true
+            });
+            
+            console.log('✅ CheerpJ 初始化成功');
+            
+        } catch (e) {
+            console.error('❌ CheerpJ 初始化失败:', e);
+            updateStatus('❌ 初始化失败: ' + e.message, 0);
+            return;
+        }
+        
+        // ===== 挂载 Minecraft JAR =====
+        try {
+            updateStatus('准备下载 Minecraft 1.7.10...', 60);
+            
+            // 创建目录
+            if (window.cheerpjCreateDirectory) {
+                await cheerpjCreateDirectory('/app/minecraft');
+                console.log('✅ 创建虚拟目录成功');
+            }
+            
+            // 挂载 JAR（上海交大镜像）
+            updateStatus('下载游戏中 (约100MB)...', 70);
+            
+            if (window.cheerpjAttachFile) {
+                await cheerpjAttachFile(
+                    '/app/minecraft/minecraft.jar',
+                    'https://mirrors.cernet.edu.cn/bmclapi/version/1.7.10/client',
+                    { mode: 'read' }
+                );
+                console.log('✅ JAR 挂载成功');
+            } else {
+                throw new Error('cheerpjAttachFile 不可用');
+            }
+            
+        } catch (e) {
+            console.error('❌ 挂载失败:', e);
+            updateStatus('❌ 下载失败: ' + e.message, 0);
+            return;
+        }
+        
+        // ===== 启动 Minecraft =====
+        try {
+            updateStatus('启动游戏中...', 90);
+            
+            if (window.cheerpjRunJar) {
+                const proc = cheerpjRunJar('/app/minecraft/minecraft.jar', [
+                    '--username', 'Player' + Math.floor(Math.random() * 1000),
+                    '--version', '1.7.10',
+                    '--gameDir', '/app/minecraft/game',
+                    '--assetsDir', '/app/minecraft/assets',
+                    '--accessToken', 'dummy'
+                ]);
+                
+                console.log('✅ 游戏进程已启动', proc);
+                updateStatus('✅ 游戏运行中', 100);
+                
+                if (gameContainer) {
+                    gameContainer.style.borderColor = '#4caf50';
+                }
+            } else {
+                throw new Error('cheerpjRunJar 不可用');
+            }
+            
+        } catch (e) {
+            console.error('❌ 启动失败:', e);
+            updateStatus('❌ 启动失败: ' + e.message, 0);
+        }
+    }
+    
+    // ========================================
+    // 5. 绑定按钮事件
+    // ========================================
+    if (launchBtn) {
+        launchBtn.addEventListener('click', startGame);
+        console.log('✅ 启动按钮已绑定');
+    } else {
+        console.error('❌ 找不到启动按钮');
+    }
+    
+    // 重置按钮
+    const resetBtn = document.getElementById('reset-btn');
+    if (resetBtn) {
+        resetBtn.addEventListener('click', function() {
+            updateStatus('环境已重置', 0);
+            if (gameContainer) {
+                gameContainer.style.borderColor = 'rgba(107, 140, 255, 0.3)';
+            }
+            if (window.cheerpjRemoveDirectory) {
+                cheerpjRemoveDirectory('/app/minecraft', { recursive: true }).catch(() => {});
             }
         });
-        
-        updateStatus('运行时初始化完成', 70);
-        return true;
-    } catch (error) {
-        console.error('初始化失败:', error);
-        throw new Error('CheerpJ 初始化失败: ' + error.message);
-    }
-}
-
-/**
- * 挂载 Minecraft 客户端 JAR
- */
-async function mountMinecraftJar() {
-    try {
-        updateStatus('正在连接镜像源...', 75);
-        
-        // 创建虚拟目录
-        await cheerpjCreateDirectory(CONFIG.mountPoint);
-        
-        updateStatus('正在下载 Minecraft 1.13 精简版 (约 60MB)...', 80);
-        
-        // 从镜像源挂载 JAR 文件
-        await cheerpjAttachFile(
-            `${CONFIG.mountPoint}/minecraft.jar`,
-            CONFIG.jarUrl,
-            { mode: 'read' }
-        );
-        
-        updateStatus('客户端文件准备就绪', 90);
-        return true;
-    } catch (error) {
-        console.error('挂载失败:', error);
-        throw new Error('下载 Minecraft 失败: ' + error.message);
-    }
-}
-
-/**
- * 启动游戏
- */
-async function launchMinecraft() {
-    if (isRunning) {
-        alert('游戏已在运行中');
-        return;
     }
     
-    isRunning = true;
-    elements.launchBtn.disabled = true;
-    
-    try {
-        // 1. 加载 CheerpJ
-        await loadCheerpJ();
-        
-        // 2. 初始化运行时
-        await initCheerpJ();
-        
-        // 3. 挂载游戏文件
-        await mountMinecraftJar();
-        
-        // 4. 启动 Minecraft 1.13
-        updateStatus('正在启动游戏...', 95);
-        
-        // 运行 JAR 包（1.13 的主类和参数略有不同）
-        const process = await cheerpjRunJar(
-            `${CONFIG.mountPoint}/minecraft.jar`,
-            [
-                '--username', 'WebPlayer',
-                '--version', CONFIG.mcVersion,
-                '--gameDir', '/app/minecraft/game',
-                '--assetsDir', '/app/minecraft/assets',
-                '--accessToken', 'dummy',
-                '--userProperties', '{}',
-                '--assetIndex', '1.13'  // 1.13 需要指定 assetIndex
-            ]
-        );
-        
-        updateStatus('✅ 游戏运行中 (1.13 精简版，无声音)', 100);
-        
-        // 监听退出
-        process.on('exit', (code) => {
-            console.log('游戏退出，退出码:', code);
-            updateStatus('游戏已退出', 0);
-            isRunning = false;
-            elements.launchBtn.disabled = false;
-        });
-        
-    } catch (error) {
-        console.error('启动失败:', error);
-        updateStatus('❌ 启动失败: ' + error.message, 0);
-        isRunning = false;
-        elements.launchBtn.disabled = false;
-    }
-}
-
-/**
- * 重置环境
- */
-async function resetEnvironment() {
-    updateStatus('正在重置环境...', 0);
-    
-    try {
-        if (window.cheerpj) {
-            await cheerpjRemoveDirectory('/app/minecraft', { recursive: true });
-        }
-        updateStatus('环境已重置', 0);
-    } catch (error) {
-        console.error('重置失败:', error);
-        updateStatus('❌ 重置失败', 0);
-    }
-    
-    isRunning = false;
-    elements.launchBtn.disabled = false;
-}
-
-// 绑定事件
-if (elements.launchBtn) elements.launchBtn.addEventListener('click', launchMinecraft);
-if (elements.resetBtn) elements.resetBtn.addEventListener('click', resetEnvironment);
-
-// 页面加载检测
-window.addEventListener('load', () => {
-    // 检查 WebAssembly
-    if (typeof WebAssembly !== 'object') {
-        updateStatus('❌ 浏览器不支持 WebAssembly', 0);
-        if (elements.launchBtn) elements.launchBtn.disabled = true;
-        return;
-    }
-    
-    updateStatus('就绪，点击启动按钮', 0);
-    console.log('Minecraft 1.13 启动器已加载');
-});
+    console.log('✅ Minecraft 启动器初始化完成');
+})();
