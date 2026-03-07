@@ -3,10 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>网页版 Minecraft · CheerpJ 启动器</title>
-    <!-- 引入 CheerpJ 核心库 -->
-    <script src="https://cdn.jsdelivr.net/npm/@leaningtech/cheerpj@3.2.0/cheerpj.js"></script>
-    <!-- 引入自定义样式 -->
+    <title>Minecraft 网页版 · 诊断版</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -14,6 +11,53 @@
         <h1>⛏️ 我的世界 · 网页版</h1>
         <p class="subtitle">基于 CheerpJ 在浏览器中运行 Java 版 Minecraft</p>
         
+        <!-- 详细的诊断面板 -->
+        <div class="diagnostic-panel">
+            <h3>🔍 环境诊断</h3>
+            <div class="diagnostic-item">
+                <span class="diag-label">浏览器支持 WebAssembly：</span>
+                <span id="diag-wasm" class="diag-value checking">检测中...</span>
+            </div>
+            <div class="diagnostic-item">
+                <span class="diag-label">CheerpJ 库加载：</span>
+                <span id="diag-cheerpj" class="diag-value checking">检测中...</span>
+            </div>
+            <div class="diagnostic-item">
+                <span class="diag-label">镜像源连接：</span>
+                <span id="diag-mirror" class="diag-value checking">检测中...</span>
+            </div>
+            <div class="diagnostic-item">
+                <span class="diag-label">浏览器内存限制：</span>
+                <span id="diag-memory" class="diag-value checking">检测中...</span>
+            </div>
+        </div>
+
+        <!-- 手动选择镜像源 -->
+        <div class="mirror-selector">
+            <h3>📡 选择 CheerpJ 镜像源</h3>
+            <div class="mirror-options">
+                <label>
+                    <input type="radio" name="mirror" value="jsdelivr" checked> 
+                    jsDelivr (推荐，国内有节点)
+                </label>
+                <label>
+                    <input type="radio" name="mirror" value="unpkg"> 
+                    UNPKG (备选)
+                </label>
+                <label>
+                    <input type="radio" name="mirror" value="staticfile"> 
+                    Staticfile CDN
+                </label>
+                <label>
+                    <input type="radio" name="mirror" value="local"> 
+                    本地加载 (需要手动下载 cheerpj.js)
+                </label>
+            </div>
+            <div class="local-path" id="local-path-input" style="display: none;">
+                <input type="text" placeholder="输入 cheerpj.js 的本地路径" value="js/cheerpj.js">
+            </div>
+        </div>
+
         <div class="status-card">
             <div class="status-header">
                 <span class="status-label">当前状态：</span>
@@ -27,14 +71,32 @@
         <div class="control-panel">
             <button id="launch-btn" class="btn btn-primary">🚀 启动游戏</button>
             <button id="reset-btn" class="btn btn-secondary">🔄 重置环境</button>
+            <button id="diagnose-btn" class="btn btn-secondary">🔍 重新诊断</button>
+        </div>
+
+        <!-- 详细的错误信息显示 -->
+        <div class="error-detail" id="error-detail" style="display: none;">
+            <h3>❌ 详细错误信息</h3>
+            <pre id="error-stack">暂无</pre>
         </div>
 
         <div class="info-panel">
             <h3>📦 使用说明</h3>
             <ul>
-                <li>本页面使用 BMCLAPI 镜像源下载游戏文件</li>
+                <li>本页面使用 BMCLAPI 镜像源下载 Minecraft 文件</li>
                 <li>首次启动需要加载约 50MB 的依赖库</li>
                 <li>游戏版本：Minecraft 1.8.9（兼容性最佳）</li>
+                <li>所有计算都在你的浏览器中运行，无需服务器</li>
+            </ul>
+        </div>
+
+        <div id="game-container" class="game-container"></div>
+    </div>
+
+    <!-- 注意：这里先不加载 CheerpJ，等用户选择镜像后再动态加载 -->
+    <script src="minecraft-launcher.js"></script>
+</body>
+</html>                <li>游戏版本：Minecraft 1.8.9（兼容性最佳）</li>
                 <li>所有计算都在你的浏览器中运行，无需服务器</li>
             </ul>
         </div>
