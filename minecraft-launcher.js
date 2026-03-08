@@ -50,3 +50,38 @@
                 '--version', '1.7.10',
                 '--gameDir', '/app/minecraft',           // 游戏目录指向 /minecraft
                 '--assetsDir', '/app/minecraft/assets',  // 资源目录
+                '--assetIndex', '1.7.10',                 // 资源索引
+                '--accessToken', 'dummy',
+                '--userProperties', '{}',
+                '--demo'  // 演示模式，避免正版验证
+            ]);
+
+            updateStatus('✅ 游戏运行中', 100);
+
+            // 监听退出
+            if (process && process.on) {
+                process.on('exit', (code) => {
+                    console.log('游戏退出，代码:', code);
+                    updateStatus('游戏已退出', 0);
+                });
+            }
+
+        } catch (error) {
+            console.error('启动失败:', error);
+            updateStatus('❌ 失败: ' + error.message, 0);
+        }
+    }
+
+    // 绑定按钮
+    if (launchBtn) {
+        launchBtn.addEventListener('click', startGame);
+    }
+
+    // 页面加载检测
+    window.addEventListener('load', () => {
+        if (typeof WebAssembly !== 'object') {
+            updateStatus('❌ 浏览器不支持 WebAssembly', 0);
+            if (launchBtn) launchBtn.disabled = true;
+        }
+    });
+})();
