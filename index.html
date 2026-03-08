@@ -4,28 +4,30 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Minecraft 1.7.10 网页版</title>
-     <!-- 引入 CheerpJ 4.1 加载器（支持 Java 17） -->
+    <!-- CheerpJ 加载器 -->
     <script src="https://cjrtnc.leaningtech.com/4.0/loader.js"></script>
     <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: #1a2a3a;
             color: white;
-            display: flex;
-            justify-content: center;
-            align-items: center;
             min-height: 100vh;
-            margin: 0;
             padding: 20px;
         }
         .container {
-            max-width: 600px;
-            width: 100%;
-            background: rgba(0,0,0,0.3);
-            border-radius: 16px;
-            padding: 24px;
+            max-width: 1200px;
+            margin: 0 auto;
         }
-        h1 { text-align: center; margin-bottom: 24px; }
+        h1 {
+            text-align: center;
+            margin-bottom: 24px;
+            font-size: 28px;
+        }
         .status-card {
             background: rgba(255,255,255,0.1);
             border-radius: 12px;
@@ -47,27 +49,86 @@
             transition: width 0.3s;
         }
         .btn {
-            width: 100%;
-            padding: 16px;
+            padding: 12px 24px;
             background: #4caf50;
             color: white;
             border: none;
             border-radius: 8px;
-            font-size: 18px;
+            font-size: 16px;
             font-weight: bold;
             cursor: pointer;
-            margin-bottom: 16px;
+            transition: 0.2s;
+            white-space: nowrap;
         }
-        .btn:hover { background: #45a049; }
-        .info {
-            background: rgba(0,0,0,0.2);
-            padding: 12px;
-            border-radius: 8px;
+        .btn:hover {
+            background: #45a049;
+        }
+        .btn-secondary {
+            background: #2c3e50;
+        }
+        .btn-secondary:hover {
+            background: #34495e;
+        }
+        .control-panel {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .game-wrapper {
+            border: 2px solid #4caf50;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #000;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        #game-container {
+            width: 100%;
+            height: 500px;
+            background: #000;
+        }
+        /* 最大化状态（不隐藏浏览器界面） */
+        .game-wrapper.maximized {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 1000;
+            border-radius: 0;
+            border: none;
+            margin: 0;
+            padding: 0;
+        }
+        .game-wrapper.maximized #game-container {
+            height: 100vh;
+        }
+        /* 全屏状态下隐藏按钮不太好操作，留个退出按钮 */
+        .fullscreen-controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1001;
+            display: none;
+            gap: 8px;
+        }
+        .game-wrapper.maximized .fullscreen-controls {
+            display: flex;
+        }
+        .fullscreen-btn {
+            padding: 8px 16px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            border: 1px solid #4caf50;
+            border-radius: 4px;
+            cursor: pointer;
             font-size: 14px;
-            line-height: 1.6;
+        }
+        .fullscreen-btn:hover {
+            background: rgba(0,0,0,0.9);
         }
     </style>
-   
 </head>
 <body>
     <div class="container">
@@ -80,18 +141,63 @@
             </div>
         </div>
 
-        <button id="launch-btn" class="btn">🚀 启动游戏</button>
+        <div class="control-panel">
+            <button id="launch-btn" class="btn">🚀 启动游戏</button>
+            <button id="maximize-btn" class="btn btn-secondary">🪟 窗口最大化</button>
+            <button id="fullscreen-btn" class="btn btn-secondary">⛶ 浏览器全屏</button>
+        </div>
 
-        <div class="info">
-            <p>📁 文件结构：</p>
-            <ul style="margin-top: 4px;">
-                <li>核心文件：/minecraft/versions/1.7.10/1.7.10.jar</li>
-                <li>资源文件：/minecraft/assets/</li>
-            </ul>
-            <p style="margin-top: 8px; color: #aaa;">首次启动会加载资源，请耐心等待</p>
+        <!-- 游戏容器包装器，用于最大化控制 -->
+        <div id="game-wrapper" class="game-wrapper">
+            <div id="game-container"></div>
+            <div class="fullscreen-controls">
+                <button id="exit-maximize" class="fullscreen-btn">退出最大化</button>
+            </div>
         </div>
     </div>
 
     <script src="minecraft-launcher.js"></script>
+    <script>
+        // 窗口最大化/退出功能（不隐藏浏览器界面）
+        const wrapper = document.getElementById('game-wrapper');
+        const maximizeBtn = document.getElementById('maximize-btn');
+        const exitMaximizeBtn = document.getElementById('exit-maximize');
+
+        maximizeBtn.addEventListener('click', () => {
+            wrapper.classList.add('maximized');
+        });
+
+        exitMaximizeBtn.addEventListener('click', () => {
+            wrapper.classList.remove('maximized');
+        });
+
+        // 浏览器全屏功能（真正的全屏，隐藏地址栏）[citation:2][citation:4]
+        const fullscreenBtn = document.getElementById('fullscreen-btn');
+        
+        fullscreenBtn.addEventListener('click', () => {
+            const elem = wrapper;
+            
+            if (elem.requestFullscreen) {
+                elem.requestFullscreen();
+            } else if (elem.webkitRequestFullscreen) { /* Chrome, Safari */
+                elem.webkitRequestFullscreen();
+            } else if (elem.msRequestFullscreen) { /* IE/Edge */
+                elem.msRequestFullscreen();
+            }
+        });
+
+        // 监听全屏变化，更新按钮状态 [citation:8]
+        document.addEventListener('fullscreenchange', () => {
+            if (!document.fullscreenElement) {
+                console.log('已退出全屏');
+            }
+        });
+
+        document.addEventListener('webkitfullscreenchange', () => {
+            if (!document.webkitFullscreenElement) {
+                console.log('已退出全屏');
+            }
+        });
+    </script>
 </body>
 </html>
