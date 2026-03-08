@@ -4,6 +4,7 @@
     const statusText = document.getElementById('status-text');
     const progressFill = document.getElementById('progress-fill');
     const launchBtn = document.getElementById('launch-btn');
+    const gameContainer = document.getElementById('game-container'); // 获取容器
 
     function updateStatus(text, progress) {
         if (statusText) statusText.textContent = text;
@@ -52,23 +53,32 @@
             
             updateStatus('初始化 CheerpJ...', 30);
             
-            // ⭐ 简化版初始化：不加自定义挂载
+            // ⭐ 关键：初始化时指定容器ID
             await cheerpjInit({
                 javaVersion: '17',
-                initialHeapSize: 512 * 1024 * 1024
-                // 去掉 mounts，让 /app/ 默认指向服务器根目录
+                initialHeapSize: 512 * 1024 * 1024,
+                // 告诉 CheerpJ 把画面渲染到这个元素里
+                container: '#game-container'
             });
             
             updateStatus('启动游戏中...', 70);
             
-            // 路径加上仓库名
+            // 先清空容器，避免残留
+            if (gameContainer) {
+                gameContainer.innerHTML = '';
+            }
+            
+            // 运行游戏
             cheerpjRunJar('/app/mymcweb/minecraft/versions/1.7.10/1.7.10.jar', [
                 '--username', 'Player' + Math.floor(Math.random() * 10000),
                 '--version', '1.7.10',
                 '--gameDir', '/app/mymcweb/minecraft',
                 '--assetsDir', '/app/mymcweb/minecraft/assets',
                 '--assetIndex', '1.7.10',
-                '--accessToken', 'dummy'
+                '--accessToken', 'dummy',
+                '--width', '854',      // 强制指定宽度
+                '--height', '480',      // 强制指定高度
+                '--fullscreen'          // 或者直接用全屏
             ]);
             
             updateStatus('✅ 游戏运行中', 100);
