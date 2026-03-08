@@ -17,19 +17,16 @@
         updateStatus('启动中...', 5);
         
         try {
-            // 正确的路径：带上仓库名 mymcweb
-            const baseUrl = '/mymcweb/minecraft';
-            const jarPath = `${baseUrl}/versions/1.7.10/1.7.10.jar`;
+            const jarPath = '/mymcweb/minecraft/versions/1.7.10/1.7.10.jar';
             
             console.log('检查文件:', jarPath);
-            
-            // 测试文件
             const res = await fetch(jarPath, { method: 'HEAD' });
             if (!res.ok) throw new Error(`文件不存在 (${res.status})`);
-            console.log('文件存在');
+            console.log('✅ 文件存在');
             
             updateStatus('初始化 CheerpJ...', 30);
             
+            // ✅ 注意这里是 cheerpjInit（带 Init）
             await cheerpjInit({
                 javaVersion: '17',
                 initialHeapSize: 512 * 1024 * 1024,
@@ -40,6 +37,7 @@
             
             updateStatus('启动游戏中...', 70);
             
+            // ✅ 注意这里是 cheerpjRunJar
             cheerpjRunJar('/app/minecraft/versions/1.7.10/1.7.10.jar', [
                 '--username', 'Player' + Math.floor(Math.random() * 10000),
                 '--version', '1.7.10',
@@ -52,7 +50,7 @@
             updateStatus('✅ 运行中', 100);
             
         } catch (err) {
-            console.error(err);
+            console.error('❌', err);
             updateStatus('❌ ' + err.message, 0);
         }
     });
