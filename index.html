@@ -3,97 +3,94 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Minecraft 网页版 · 诊断版</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Minecraft 1.7.10 网页版</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a2a3a;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            width: 100%;
+            background: rgba(0,0,0,0.3);
+            border-radius: 16px;
+            padding: 24px;
+        }
+        h1 { text-align: center; margin-bottom: 24px; }
+        .status-card {
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 12px;
+        }
+        .progress-fill {
+            width: 0%;
+            height: 100%;
+            background: #4caf50;
+            transition: width 0.3s;
+        }
+        .btn {
+            width: 100%;
+            padding: 16px;
+            background: #4caf50;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-bottom: 16px;
+        }
+        .btn:hover { background: #45a049; }
+        .info {
+            background: rgba(0,0,0,0.2);
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+    </style>
+    <!-- 引入 CheerpJ 4.1 加载器（支持 Java 17） -->
+    <script src="https://cjrtnc.leaningtech.com/4.1/loader.js"></script>
 </head>
 <body>
     <div class="container">
-        <h1>⛏️ 我的世界 · 网页版</h1>
-        <p class="subtitle">基于 CheerpJ 在浏览器中运行 Java 版 Minecraft</p>
+        <h1>⛏️ Minecraft 1.7.10 网页版</h1>
         
-        <!-- 详细的诊断面板 -->
-        <div class="diagnostic-panel">
-            <h3>🔍 环境诊断</h3>
-            <div class="diagnostic-item">
-                <span class="diag-label">浏览器支持 WebAssembly：</span>
-                <span id="diag-wasm" class="diag-value checking">检测中...</span>
-            </div>
-            <div class="diagnostic-item">
-                <span class="diag-label">CheerpJ 库加载：</span>
-                <span id="diag-cheerpj" class="diag-value checking">检测中...</span>
-            </div>
-            <div class="diagnostic-item">
-                <span class="diag-label">镜像源连接：</span>
-                <span id="diag-mirror" class="diag-value checking">检测中...</span>
-            </div>
-            <div class="diagnostic-item">
-                <span class="diag-label">浏览器内存限制：</span>
-                <span id="diag-memory" class="diag-value checking">检测中...</span>
-            </div>
-        </div>
-
-        <!-- 手动选择镜像源 -->
-        <div class="mirror-selector">
-            <h3>📡 选择 CheerpJ 镜像源</h3>
-            <div class="mirror-options">
-                <label>
-                    <input type="radio" name="mirror" value="jsdelivr" checked> 
-                    jsDelivr (推荐，国内有节点)
-                </label>
-                <label>
-                    <input type="radio" name="mirror" value="unpkg"> 
-                    UNPKG (备选)
-                </label>
-                <label>
-                    <input type="radio" name="mirror" value="staticfile"> 
-                    Staticfile CDN
-                </label>
-                <label>
-                    <input type="radio" name="mirror" value="local"> 
-                    本地加载 (需要手动下载 cheerpj.js)
-                </label>
-            </div>
-            <div class="local-path" id="local-path-input" style="display: none;">
-                <input type="text" placeholder="输入 cheerpj.js 的本地路径" value="js/cheerpj.js">
-            </div>
-        </div>
-
         <div class="status-card">
-            <div class="status-header">
-                <span class="status-label">当前状态：</span>
-                <span id="status-text" class="status-value">等待启动...</span>
-            </div>
-            <div class="progress-bar" id="progress-bar">
-                <div class="progress-fill" id="progress-fill"></div>
+            <div id="status-text" style="font-size: 18px; margin-bottom: 8px;">就绪</div>
+            <div class="progress-bar">
+                <div id="progress-fill" class="progress-fill"></div>
             </div>
         </div>
 
-        <div class="control-panel">
-            <button id="launch-btn" class="btn btn-primary">🚀 启动游戏</button>
-            <button id="reset-btn" class="btn btn-secondary">🔄 重置环境</button>
-            <button id="diagnose-btn" class="btn btn-secondary">🔍 重新诊断</button>
-        </div>
+        <button id="launch-btn" class="btn">🚀 启动游戏</button>
 
-        <!-- 详细的错误信息显示 -->
-        <div class="error-detail" id="error-detail" style="display: none;">
-            <h3>❌ 详细错误信息</h3>
-            <pre id="error-stack">暂无</pre>
-        </div>
-
-        <div class="info-panel">
-            <h3>📦 使用说明</h3>
-            <ul>
-                <li>本页面使用 BMCLAPI 镜像源下载 Minecraft 文件</li>
-                <li>首次启动需要加载约 50MB 的依赖库</li>
-                <li>游戏版本：Minecraft 1.8.9（兼容性最佳）</li>
-                <li>所有计算都在你的浏览器中运行，无需服务器</li>
+        <div class="info">
+            <p>📁 文件结构：</p>
+            <ul style="margin-top: 4px;">
+                <li>核心文件：/minecraft/versions/1.7.10/1.7.10.jar</li>
+                <li>资源文件：/minecraft/assets/</li>
             </ul>
+            <p style="margin-top: 8px; color: #aaa;">首次启动会加载资源，请耐心等待</p>
         </div>
-
-        <div id="game-container" class="game-container"></div>
     </div>
 
-    <!-- 注意：这里先不加载 CheerpJ，等用户选择镜像后再动态加载 -->
     <script src="minecraft-launcher.js"></script>
 </body>
-    </html>
+</html>
