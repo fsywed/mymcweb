@@ -1,4 +1,4 @@
-name: 准备完整 Minecraft 1.7.10 环境
+name: 准备 Minecraft 1.7.10 环境
 
 on:
   workflow_dispatch:
@@ -11,104 +11,56 @@ jobs:
       actions: write
     
     steps:
-      - name: 检出代码
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
       
-      - name: 创建目录结构
+      - name: 创建目录
         run: |
           mkdir -p minecraft/versions/1.7.10
           mkdir -p minecraft/assets/indexes
           mkdir -p minecraft/assets/objects
-          mkdir -p output
+          mkdir -p temp_assets
       
-      - name: 下载 1.7.10 客户端核心
+      - name: 下载核心
         run: |
-          echo "📥 从 Mojang 官方下载 1.7.10 客户端..."
-          # 使用你提供的官方地址
           curl -L -o minecraft/versions/1.7.10/1.7.10.jar \
             "https://piston-data.mojang.com/v1/objects/1cf89c77ed5e72401b869f66410934804f3d6f52/client.jar"
-          
-          echo "✅ 核心文件下载完成"
-          ls -lh minecraft/versions/1.7.10/
       
-      - name: 下载版本元数据
+      - name: 下载版本JSON
         run: |
-          echo "📥 下载版本 JSON..."
-          # 从 BMCLAPI 获取版本元数据（包含 assetIndex 信息）
           curl -L -o minecraft/versions/1.7.10/1.7.10.json \
             "https://bmclapi2.bangbang93.com/version/1.7.10/json"
-          
-          echo "✅ 版本元数据下载完成"
       
-      - name: 解析并下载所有资源文件
+      - name: 下载assetIndex
         run: |
-          echo "🔍 解析资源索引..."
-          
-          # 从版本 JSON 中提取 assetIndex URL
-          ASSET_INDEX_URL=$(jq -r '.assetIndex.url' minecraft/versions/1.7.10/1.7.10.json)
-          echo "资源索引地址: $ASSET_INDEX_URL"
-          
-          # 下载 assetIndex JSON
-          curl -L -o minecraft/assets/indexes/1.7.10.json "$ASSET_INDEX_URL"
-          
-          echo "📥 开始下载资源文件（纹理、音频等，约 100MB+）..."
+          ASSET_URL=$(jq -r '.assetIndex.url' minecraft/versions/1.7.10/1.7.10.json)
+          curl -L -o minecraft/assets/indexes/1.7.10.json "$ASSET_URL"
+      
+      - name: 安装 parallel
+        run: sudo apt-get update && sudo apt-get install -y parallel
+      
+      - name: 生成下载列表
+        run: |
           cd minecraft/assets
-          
-          # 解析 assetIndex 并下载所有 objects
-          # 使用 jq 解析 JSON，逐行处理
-          jq -r '.objects | to_entries[] | "\(.key) \(.value.hash)"' indexes/1.7.10.json | while read -r path hash; do
-            # 创建子目录（hash 的前两位）
-            mkdir -p "objects/${hash:0:2}"
-            
-            # 如果文件不存在才下载
-            if [ ! -f "objects/${hash:0:2}/$hash" ]; then
-              echo "下载: $path"
-              # 从 BMCLAPI 镜像下载资源（比官方快）
-              curl -L -o "objects/${hash:0:2}/$hash" \
-                "https://bmclapi2.bangbang93.com/assets/$hash"
-              
-              # 每下载10个文件暂停一下
-              if (( ++count % 10 == 0 )); then
-                echo "已下载 $count 个文件，暂停1秒..."
-                sleep 1
-              fi
-            fi
-          done
-          
+          jq -r '.objects | to_entries[] | "\(.key) \(.value.hash)"' indexes/1.7.10.json > ../../download_list.txt
           cd ../..
-          echo "✅ 资源文件下载完成"
-          echo "总共下载文件数: $count"
+          echo "总文件数: $(wc -l < download_list.txt)"
       
-      - name: 打包完整环境
+      - name: 多线程下载（20并发）
         run: |
-          echo "📦 打包完整 Minecraft 1.7.10 环境..."
-          cd minecraft
-          zip -r ../output/minecraft-1.7.10-complete.zip .
-          cd ..
-          
-          echo "打包完成，文件大小: $(du -h output/minecraft-1.7.10-complete.zip | cut -f1)"
+          cat download_list.txt | parallel -j 20 '
+            path=$(echo {} | cut -d" " -f1)
+            hash=$(echo {} | cut -d" " -f2)
+            dir="minecraft/assets/objects/${hash:0:2}"
+            mkdir -p $dir
+            if [ ! -f "$dir/$hash" ]; then
+              curl -L -s -o "$dir/$hash" "https://bmclapi2.bangbang93.com/assets/$hash"
+            fi
+          '
       
-      - name: 上传为 Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: minecraft-1.7.10-complete
-          path: output/minecraft-1.7.10-complete.zip
-          retention-days: 30
-      
-      - name: 完成提示
+      - name: 提交到仓库
         run: |
-          echo "🎉 完整 Minecraft 1.7.10 环境准备完成！"
-          echo ""
-          echo "📦 下载方式："
-          echo "1. 在 Actions 页面找到本次运行"
-          echo "2. 点击底部的 'minecraft-1.7.10-complete' 工件下载"
-          echo ""
-          echo "📁 下载后解压，用 CheerpJ 运行："
-          echo "cheerpjRunJar('/app/versions/1.7.10/1.7.10.jar', ["
-          echo "  '--username', 'Player',"
-          echo "  '--version', '1.7.10',"
-          echo "  '--gameDir', '/app',"
-          echo "  '--assetsDir', '/app/assets',"
-          echo "  '--assetIndex', '1.7.10',"
-          echo "  '--accessToken', 'dummy'"
-          echo "])"
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add minecraft/
+          git diff --staged --quiet || git commit -m "更新 Minecraft 1.7.10 环境"
+          git push
