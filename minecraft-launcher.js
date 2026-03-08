@@ -4,8 +4,34 @@
     const statusText = document.getElementById('status-text');
     const progressFill = document.getElementById('progress-fill');
     const launchBtn = document.getElementById('launch-btn');
+// 在文件最开头加上
+function waitForCheerpJ() {
+    return new Promise((resolve) => {
+        if (window.cheerpjInit) {
+            resolve();
+            return;
+        }
+        // 轮询检测
+        let attempts = 0;
+        const interval = setInterval(() => {
+            if (window.cheerpjInit) {
+                clearInterval(interval);
+                resolve();
+            }
+            attempts++;
+            if (attempts > 50) { // 5秒超时
+                clearInterval(interval);
+                console.error('CheerpJ 加载超时');
+                updateStatus('❌ CheerpJ 加载超时', 0);
+            }
+        }, 100);
+    });
+}
 
     function updateStatus(text, progress) {
+        
+// 然后在 startGame 的第一行加上
+await waitForCheerpJ();
         if (statusText) statusText.textContent = text;
         if (progressFill && progress !== undefined) {
             progressFill.style.width = progress + '%';
