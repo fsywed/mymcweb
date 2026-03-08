@@ -1,98 +1,52 @@
-// Minecraft 网页版 - 最终修复版
-// 使用 Staticfile CDN（国内最稳）+ 1.7.10
-
 (function() {
-    console.log('🚀 Minecraft 启动器开始运行');
-    
-    // 获取页面元素
+    // DOM 元素
     const statusText = document.getElementById('status-text');
     const progressFill = document.getElementById('progress-fill');
     const launchBtn = document.getElementById('launch-btn');
-    
+
     function updateStatus(text, progress) {
-        console.log('📢', text, progress || '');
         if (statusText) statusText.textContent = text;
         if (progressFill && progress !== undefined) {
             progressFill.style.width = progress + '%';
         }
+        console.log(`[状态] ${text} ${progress ? progress + '%' : ''}`);
     }
-    
-    // 直接使用 Staticfile CDN（国内最稳）
-    const CHEERPJ_URL = 'https://cjrtnc.leaningtech.com/2.3/loader.js';
-    
-    // 加载 CheerpJ
-    function loadCheerpJ() {
-        return new Promise((resolve, reject) => {
-            if (window.cheerpj) {
-                resolve();
-                return;
+
+    async function startGame() {
+        try {
+            updateStatus('初始化 CheerpJ...', 10);
+            
+            // 初始化 CheerpJ，设置正确的挂载点
+            await cheerpjInit({
+                javaVersion: '17',  // 1.7.10 需要 Java 17
+                initialHeapSize: 1024 * 1024 * 1024,  // 1GB
+                // 关键：将仓库中的 minecraft 目录挂载到虚拟文件系统的 /app/minecraft
+                mounts: {
+                    // 这里不需要额外配置，/app/ 默认指向服务器根目录
+                    // 你的文件在服务器上的 /minecraft/，所以在虚拟文件系统里就是 /app/minecraft/
+                }
+            });
+
+            updateStatus('准备启动...', 40);
+            
+            // 检查文件是否存在
+            try {
+                // 注意路径：/app/minecraft/... 对应服务器上的 /minecraft/...
+                const response = await fetch('/minecraft/versions/1.7.10/1.7.10.jar', { method: 'HEAD' });
+                if (!response.ok) {
+                    throw new Error(`核心文件不存在 (HTTP ${response.status})`);
+                }
+                console.log('✅ 核心文件存在');
+            } catch (e) {
+                throw new Error('无法访问核心文件，请确保文件已上传到 /minecraft/versions/1.7.10/1.7.10.jar');
             }
-            
-            updateStatus('加载 CheerpJ...', 20);
-            
-            const script = document.createElement('script');
-            script.src = CHEERPJ_URL;
-            script.onload = () => {
-                console.log('✅ CheerpJ 脚本加载成功');
-                updateStatus('CheerpJ 加载成功', 40);
-                resolve();
-            };
-            script.onerror = (e) => {
-                console.error('❌ CheerpJ 加载失败:', e);
-                reject(new Error('CheerpJ 加载失败'));
-            };
-            document.head.appendChild(script);
-        });
-    }
-    
-    // 启动游戏
-    // 启动游戏
-async function startGame() {
-    try {
-        // 1. 加载 CheerpJ
-        await loadCheerpJ();
 
-        // 2. 等待 cheerpjInit 可用
-        updateStatus('初始化中...', 50);
-        for (let i = 0; i < 20; i++) {
-            if (window.cheerpjInit) break;
-            await new Promise(r => setTimeout(r, 200));
-        }
+            updateStatus('启动游戏中...', 70);
 
-        if (!window.cheerpjInit) {
-            throw new Error('cheerpjInit 不可用');
-        }
-
-        // 3. 初始化 CheerpJ
-        await cheerpjInit({
-            javaVersion: '8',
-            initialHeapSize: 384 * 1024 * 1024
-        });
-
-        updateStatus('启动游戏中...', 70);
-
-        // 4. ⭐ 直接运行 JAR，CheerpJ 会自动通过 HTTP 从 /app/ 加载它
-        //    确保你的 JAR 文件放在服务器根目录的 /minecraft/minecraft.jar
-        cheerpjRunJar('/app/minecraft/minecraft.jar', [
-            '--username', 'Player' + Math.floor(Math.random() * 1000),
-            '--version', '1.7.10',
-            '--gameDir', '/app/game',          // 工作目录也建议用 /app/
-            '--assetsDir', '/app/assets',       // 资源目录也建议用 /app/
-            '--accessToken', 'dummy'
-        ]);
-
-        updateStatus('✅ 游戏运行中', 100);
-
-    } catch (err) {
-        console.error('❌ 启动失败:', err);
-        updateStatus('❌ 失败: ' + err.message, 0);
-    }
-}
-    
-    // 绑定按钮
-    if (launchBtn) {
-        launchBtn.onclick = startGame;
-    }
-    
-    updateStatus('就绪，点击启动', 0);
-})();
+            // 运行 Minecraft
+            // 路径格式：/app/minecraft/... 对应服务器的 /minecraft/...
+            const process = cheerpjRunJar('/app/minecraft/versions/1.7.10/1.7.10.jar', [
+                '--username', 'Player' + Math.floor(Math.random() * 10000),
+                '--version', '1.7.10',
+                '--gameDir', '/app/minecraft',           // 游戏目录指向 /minecraft
+                '--assetsDir', '/app/minecraft/assets',  // 资源目录
