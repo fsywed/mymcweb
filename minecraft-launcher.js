@@ -71,8 +71,8 @@
             await cheerpjRunJar('/app/mymcweb/minecraft/versions/1.7.10/1.7.10.jar', []);
             
             updateStatus('启动游戏中...', 70);
-            
-            // 运行主类
+
+            // ⭐ 只保留这一个运行命令
             cheerpjRunMain('net.minecraft.client.main.Main', [
                 '--username', 'Player' + Math.floor(Math.random() * 10000),
                 '--version', '1.7.10',
@@ -82,14 +82,15 @@
                 '--accessToken', 'dummy',
                 '--width', '854',
                 '--height', '480'
-            ]);
-            
-            updateStatus('✅ 游戏运行中', 100);
-            
-            // 延迟检查
-            setTimeout(() => {
-                console.log('容器子元素数:', gameContainer ? gameContainer.children.length : '无容器');
-            }, 5000);
+            ]).then(exitCode => {
+                console.log('游戏退出，代码:', exitCode);
+                if (exitCode !== 0) {
+                    updateStatus(`❌ 游戏异常退出 (${exitCode})`, 0);
+                }
+            }).catch(err => {
+                console.error('运行失败:', err);
+                updateStatus('❌ 运行失败', 0);
+            });
             
         } catch (err) {
             console.error('❌ 启动失败:', err);
