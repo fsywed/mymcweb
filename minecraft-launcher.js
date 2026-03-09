@@ -1,5 +1,5 @@
 (function() {
-    console.log('=== Minecraft 启动器 ===');
+    console.log('=== Minecraft 启动器（完全调试版）===');
     
     const statusText = document.getElementById('status-text');
     const progressFill = document.getElementById('progress-fill');
@@ -52,27 +52,45 @@
             
             updateStatus('初始化 CheerpJ...', 30);
             
-            // 初始化 CheerpJ
+            // 初始化 CheerpJ - 开启调试，添加进度监听
             await cheerpjInit({
                 javaVersion: '17',
                 initialHeapSize: 1024 * 1024 * 1024,
                 awt: true,
-                container: '#game-container'
+                container: '#game-container',
+                enableDebug: true,  // 开启详细调试日志
+                status: 'default',   // 显示状态信息
+                preloadProgress: (loaded, total) => {
+                    const percent = Math.round((loaded / total) * 100);
+                    console.log(`⏳ 预加载进度: ${loaded}/${total} (${percent}%)`);
+                }
             });
             
             // 创建显示
             if (cheerpjCreateDisplay) {
                 cheerpjCreateDisplay('#game-container');
+                console.log('✅ 显示系统创建');
             }
             
             updateStatus('加载游戏核心...', 50);
+            console.log('⏳ 开始加载 Minecraft 核心，这可能需要 30-60 秒...');
             
-            // 先加载 jar
-            await cheerpjRunJar('/app/mymcweb/minecraft/versions/1.7.10/1.7.10.jar', []);
+            // 先加载 jar - 添加超时保护
+            const loadPromise = cheerpjRunJar('/app/mymcweb/minecraft/versions/1.7.10/1.7.10.jar', []);
             
+            // 设置 60 秒超时
+            const timeoutPromise = new Promise((_, reject) => {
+                setTimeout(() => reject(new Error('加载核心超时 (60秒)')), 60000);
+            });
+            
+            // 等待加载完成或超时
+            await Promise.race([loadPromise, timeoutPromise]);
+            
+            console.log('✅ 核心加载完成');
             updateStatus('启动游戏中...', 70);
 
-            // ⭐ 只保留这一个运行命令
+            // 运行主类
+            console.log('⏳ 启动 Minecraft 主类...');
             cheerpjRunMain('net.minecraft.client.main.Main', [
                 '--username', 'Player' + Math.floor(Math.random() * 10000),
                 '--version', '1.7.10',
@@ -91,6 +109,8 @@
                 console.error('运行失败:', err);
                 updateStatus('❌ 运行失败', 0);
             });
+            
+            updateStatus('✅ 游戏运行中', 100);
             
         } catch (err) {
             console.error('❌ 启动失败:', err);
