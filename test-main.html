@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Minecraft 主类测试</title>
+    <script src="https://cjrtnc.leaningtech.com/4.0/loader.js"></script>
+</head>
+<body>
+    <script>
+    async function test() {
+        await cheerpjInit({ javaVersion: '17' });
+        
+        // 测试 Minecraft 主类是否存在
+        try {
+            await cheerpjRunJar('/app/mymcweb/minecraft/versions/1.7.10/1.7.10.jar', []);
+            console.log('✅ jar 加载成功');
+            
+            // 尝试获取主类信息
+            cheerpjRunMain('net.minecraft.client.main.Main', ['--help'])
+                .catch(e => console.log('主类测试结果:', e));
+        } catch(e) {
+            console.error('测试失败:', e);
+        }
+    }
+    test();
+    </script>
+</body>
+</html>
