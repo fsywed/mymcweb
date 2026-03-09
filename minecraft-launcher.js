@@ -52,40 +52,28 @@
             
             updateStatus('初始化 CheerpJ...', 30);
             
-            // ⭐ 关键配置：启用 AWT 并指定容器
+            // 初始化 CheerpJ
             await cheerpjInit({
                 javaVersion: '17',
                 initialHeapSize: 1024 * 1024 * 1024,
                 awt: true,
-                container: '#game-container',
-                // 告诉 CheerpJ 使用新的窗口系统
-                windowingSystem: 'cheerpj',
-                // 预加载必要的类
-                preloadClasses: [
-                    'java.awt.Component',
-                    'java.awt.Container',
-                    'java.awt.Window',
-                    'javax.swing.JFrame',
-                    'javax.swing.JPanel'
-                ]
+                container: '#game-container'
             });
+            
+            // 创建显示
+            if (cheerpjCreateDisplay) {
+                cheerpjCreateDisplay('#game-container');
+            }
+            
+            updateStatus('加载游戏核心...', 50);
+            
+            // 先加载 jar
+            await cheerpjRunJar('/app/mymcweb/minecraft/versions/1.7.10/1.7.10.jar', []);
             
             updateStatus('启动游戏中...', 70);
             
-            // 清空容器并设置样式
-            if (gameContainer) {
-                gameContainer.innerHTML = '';
-                gameContainer.style.position = 'relative';
-                gameContainer.style.overflow = 'hidden';
-            }
-            
-            // ⭐ 运行游戏：使用 cheerpjRunJarWithClass 指定主类
-            // 并加上系统属性强制使用 CheerpJ 的 AWT 实现
-            const process = cheerpjRunJar('/app/mymcweb/minecraft/versions/1.7.10/1.7.10.jar', [
-                '-Djava.awt.headless=false',
-                '-Dcheerpj.awt.disable=true',  // 禁用旧版 AWT
-                '-Dcheerpj.awt.enable=true',   // 启用新版 AWT
-                'net.minecraft.client.main.Main',  // 明确指定主类
+            // 运行主类
+            cheerpjRunMain('net.minecraft.client.main.Main', [
                 '--username', 'Player' + Math.floor(Math.random() * 10000),
                 '--version', '1.7.10',
                 '--gameDir', '/app/mymcweb/minecraft',
@@ -98,19 +86,10 @@
             
             updateStatus('✅ 游戏运行中', 100);
             
-            // 轮询检查容器变化
-            let checkCount = 0;
-            const checkInterval = setInterval(() => {
-                if (gameContainer.children.length > 0) {
-                    console.log('✅ 画面已出现！子元素数:', gameContainer.children.length);
-                    clearInterval(checkInterval);
-                }
-                checkCount++;
-                if (checkCount > 30) { // 30秒后停止检查
-                    clearInterval(checkInterval);
-                    console.log('⚠️ 画面未出现，可能启动失败');
-                }
-            }, 1000);
+            // 延迟检查
+            setTimeout(() => {
+                console.log('容器子元素数:', gameContainer ? gameContainer.children.length : '无容器');
+            }, 5000);
             
         } catch (err) {
             console.error('❌ 启动失败:', err);
