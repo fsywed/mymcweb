@@ -1,27 +1,41 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Minecraft 主类测试</title>
+    <title>CheerpJ 测试</title>
     <script src="https://cjrtnc.leaningtech.com/4.0/loader.js"></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        #status { margin-top: 20px; }
+        button { padding: 10px; font-size: 16px; }
+    </style>
 </head>
 <body>
+    <h1>CheerpJ 简易测试</h1>
+    <button id="runTest">运行测试</button>
+    <div id="status"></div>
+
     <script>
-    async function test() {
-        await cheerpjInit({ javaVersion: '17' });
-        
-        // 测试 Minecraft 主类是否存在
-        try {
-            await cheerpjRunJar('/app/mymcweb/minecraft/versions/1.7.10/1.7.10.jar', []);
-            console.log('✅ jar 加载成功');
+        async function runTest() {
+            const status = document.getElementById('status');
+            status.textContent = '初始化 CheerpJ...';
             
-            // 尝试获取主类信息
-            cheerpjRunMain('net.minecraft.client.main.Main', ['--help'])
-                .catch(e => console.log('主类测试结果:', e));
-        } catch(e) {
-            console.error('测试失败:', e);
+            try {
+                await cheerpjInit({
+                    javaVersion: '8',   // 使用 Java 8
+                    awt: true
+                });
+                status.textContent = 'CheerpJ 初始化成功，正在运行测试 jar...';
+                
+                // 运行 Test.jar
+                const exitCode = await cheerpjRunJar('/app/mymcweb/test/Test.jar', []);
+                status.textContent = `测试程序退出，代码: ${exitCode}`;
+            } catch (e) {
+                status.textContent = '错误: ' + e.message;
+                console.error(e);
+            }
         }
-    }
-    test();
+
+        document.getElementById('runTest').addEventListener('click', runTest);
     </script>
 </body>
 </html>
