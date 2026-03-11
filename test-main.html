@@ -134,45 +134,54 @@
             }
         }
 
-        // 3. 运行测试
-        async function runTest() {
-            updateStatus('🚀 准备运行测试...');
-            
-            // 确保 CheerpJ 已初始化
-            if (!window.cheerpjInit) {
-                updateStatus('⚠️ CheerpJ 未初始化，正在初始化...');
-                try {
-                    await cheerpjInit({
-                        javaVersion: '8',
-                        awt: true
-                    });
-                    cheerpjReady = true;
-                } catch (err) {
-                    updateStatus(`❌ CheerpJ 初始化失败: ${err.message}`, true);
-                    return;
-                }
-            }
-
-            // 再次确认文件
-            const exists = await checkFile();
-            if (!exists) {
-                updateStatus('❌ 文件不存在，无法运行测试', true);
-                return;
-            }
-
-            // 显示容器
-            gameContainer.style.display = 'block';
-            
-            updateStatus('🎮 正在运行测试程序...');
-            
-            try {
-                const exitCode = await cheerpjRunJar(JAR_URL, []);
-                updateStatus(`✅ 测试完成，退出码: ${exitCode}`);
-            } catch (err) {
-                updateStatus(`❌ 运行失败: ${err.message}`, true);
-                console.error(err);
-            }
+        // 3. 运行测试（带强制预下载）
+async function runTest() {
+    updateStatus('🚀 准备运行测试...');
+    
+    // 第一步：强制下载 Jar 文件（确保文件真的到浏览器了）
+    updateStatus('⏳ 强制下载 Jar 文件...');
+    try {
+        const response = await fetch(JAR_CHECK_URL);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const blob = await response.blob();
+        updateStatus(`✅ 文件已下载到缓存 (${blob.size} 字节)`);
+    } catch (err) {
+        updateStatus(`❌ 文件下载失败: ${err.message}`, true);
+        return;
+    }
+    
+    // 第二步：等一小会儿，让浏览器缓存稳定
+    await new Promise(r => setTimeout(r, 500));
+    
+    // 第三步：确保 CheerpJ 已初始化
+    if (!window.cheerpjInit) {
+        updateStatus('⚠️ CheerpJ 未初始化，正在初始化...');
+        try {
+            await cheerpjInit({
+                javaVersion: '8',
+                awt: true
+            });
+            cheerpjReady = true;
+        } catch (err) {
+            updateStatus(`❌ CheerpJ 初始化失败: ${err.message}`, true);
+            return;
         }
+    }
+
+    // 显示容器
+    gameContainer.style.display = 'block';
+    
+    updateStatus('🎮 正在运行测试程序...');
+    
+    // 第四步：运行 Jar
+    try {
+        const exitCode = await cheerpjRunJar(JAR_URL, []);
+        updateStatus(`✅ 测试完成，退出码: ${exitCode}`);
+    } catch (err) {
+        updateStatus(`❌ 运行失败: ${err.message}`, true);
+        console.error(err);
+    }
+}
 
         // 4. 重置 CheerpJ（不清除文件缓存）
         async function resetCheerpJ() {
