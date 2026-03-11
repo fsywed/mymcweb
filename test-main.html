@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>CheerpJ 测试</title>
+    <title>CheerpJ 简易测试</title>
     <script src="https://cjrtnc.leaningtech.com/4.0/loader.js"></script>
     <style>
         body { font-family: sans-serif; padding: 20px; }
-        #status { margin-top: 20px; }
-        button { padding: 10px; font-size: 16px; }
+        #status { margin: 20px 0; color: #666; }
+        button { padding: 10px 20px; font-size: 16px; }
     </style>
 </head>
 <body>
@@ -17,24 +17,34 @@
     <script>
         async function runTest() {
             const status = document.getElementById('status');
-            status.textContent = '初始化 CheerpJ...';
+            status.textContent = '⏳ 等待 CheerpJ 完全就绪...';
+            
+            // ✅ 关键修复：等待 CheerpJ 内部完全初始化
+            await cheerpjInit({
+                javaVersion: '8',
+                awt: true
+            });
+            
+            status.textContent = '✅ CheerpJ 就绪，等待文件加载...';
+            
+            // 再等一小会儿，确保网络层也准备好
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            status.textContent = '🚀 尝试加载 Test.jar...';
             
             try {
-                await cheerpjInit({
-                    javaVersion: '8',   // 使用 Java 8
-                    awt: true
-                });
-                status.textContent = 'CheerpJ 初始化成功，正在运行测试 jar...';
-                
-                // 运行 Test.jar
                 const exitCode = await cheerpjRunJar('/app/mymcweb/Test.jar', []);
-                status.textContent = `测试程序退出，代码: ${exitCode}`;
+                status.textContent = `✅ 测试完成，退出码: ${exitCode}`;
             } catch (e) {
-                status.textContent = '错误: ' + e.message;
+                status.textContent = '❌ 错误: ' + e.message;
                 console.error(e);
             }
         }
 
+        // 页面加载完自动运行测试（可选）
+        window.addEventListener('load', runTest);
+        
+        // 也保留按钮点击
         document.getElementById('runTest').addEventListener('click', runTest);
     </script>
 </body>
