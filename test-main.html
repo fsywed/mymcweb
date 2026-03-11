@@ -27,7 +27,7 @@
                 status.textContent = 'CheerpJ 初始化成功，正在运行测试 jar...';
                 
                 // 运行 Test.jar
-                const exitCode = await cheerpjRunJar('/app/mymcweb/test/Test.jar', []);
+                const exitCode = await cheerpjRunJar('/app/mymcweb/Test.jar', []);
                 status.textContent = `测试程序退出，代码: ${exitCode}`;
             } catch (e) {
                 status.textContent = '错误: ' + e.message;
