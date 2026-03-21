@@ -1,4 +1,87 @@
-<!DOCTYPE html><html><head><title>CheerpJ 最终测试</title><script src="https://cjrtnc.leaningtech.com/4.1/loader.js"></script></head><body><div id="game" style="width:854px;height:480px;border:2px solid #4caf50"></div><script>
-async function test(){await cheerpjInit({javaVersion:'8',awt:true,canvas:'#game'});let r=await fetch('https://fsywed.github.io/mymcweb/Test.jar'),b=await r.arrayBuffer();await cheerpOSAddStringFile('/files/Test.jar',new Uint8Array(b));console.log(await cheerpjRunJar('/files/Test.jar',[]))}
-test()
-</script></body></html>
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>CheerpJ 最终测试</title>
+    <script src="https://cjrtnc.leaningtech.com/4.1/loader.js"></script>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #1e1e1e; color: #d4d4d4; }
+        #log { background: #252526; padding: 15px; border-radius: 8px; height: 300px; overflow-y: auto; white-space: pre-wrap; font-size: 14px; border: 1px solid #3c3c3c; }
+        #game { width: 854px; height: 480px; border: 2px solid #4caf50; margin-top: 20px; background: #000; border-radius: 4px; }
+        button { background: #0e639c; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-bottom: 10px; }
+        button:hover { background: #1177bb; }
+        .status { color: #4ec9b0; }
+        .error { color: #f48771; }
+    </style>
+</head>
+<body>
+    <h2>🧪 CheerpJ 最终测试</h2>
+    <button id="runBtn">🚀 启动测试</button>
+    <div id="log">📋 准备就绪，请点击按钮...<br></div>
+    <div id="game"></div>
+
+    <script>
+        const logDiv = document.getElementById('log');
+        const gameDiv = document.getElementById('game');
+        const runBtn = document.getElementById('runBtn');
+
+        function log(msg, isError = false) {
+            const span = document.createElement('div');
+            span.innerHTML = msg;
+            span.style.color = isError ? '#f48771' : '#4ec9b0';
+            logDiv.appendChild(span);
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(msg);
+        }
+
+        runBtn.onclick = async () => {
+            runBtn.disabled = true;
+            log('⏳ 开始测试...');
+
+            try {
+                // 1. 初始化 CheerpJ
+                log('📌 [1/4] 初始化 CheerpJ...');
+                await cheerpjInit({
+                    javaVersion: '8',
+                    awt: true,
+                    canvas: '#game'
+                });
+                log('✅ 初始化成功');
+
+                // 2. 创建显示
+                log('📌 [2/4] 创建图形容器...');
+                if (typeof cheerpjCreateDisplay === 'function') {
+                    cheerpjCreateDisplay('#game');
+                    log('✅ 容器创建成功');
+                }
+
+                // 3. 下载并注入 Jar 文件
+                log('📌 [3/4] 下载 Test.jar...');
+                // GitHub Pages 上的路径：你的文件在根目录，所以是 /Test.jar
+                const response = await fetch('/Test.jar');
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status} - 文件不存在`);
+                }
+                const jarData = await response.arrayBuffer();
+                log(`✅ 下载成功 (${jarData.byteLength} 字节)`);
+
+                log('📌 注入到虚拟文件系统...');
+                await cheerpOSAddStringFile('/str/Test.jar', new Uint8Array(jarData));
+                log('✅ 注入成功');
+
+                // 4. 运行
+                log('📌 [4/4] 运行程序...');
+                log('🎮 等待弹窗...');
+                const exitCode = await cheerpjRunJar('/str/Test.jar', []);
+                log(`✅ 完成，退出码: ${exitCode}`);
+
+            } catch (err) {
+                log(`❌ 失败: ${err.message}`, true);
+                console.error(err);
+            } finally {
+                runBtn.disabled = false;
+            }
+        };
+    </script>
+</body>
+</html>
